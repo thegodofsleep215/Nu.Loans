@@ -43,7 +43,8 @@ namespace Nu.Loans.BL
             return annualWorth*((factor - 1)/interestRate);
         }
 
-        public static int FindN(Func<int, decimal> loanFunc, decimal targetValue, decimal tolerence, out decimal leftOver)
+
+        public static int FindN(Func<int, decimal> loanFunc, decimal targetValue, decimal annualWorth, out decimal finalPayment)
         {
             var a = 1;
             var b = 5;
@@ -58,9 +59,10 @@ namespace Nu.Loans.BL
             {
                 var n = (b/2) + (a/2);
                 var result = loanFunc(n);
-                leftOver = result - targetValue;
-                var dif = Math.Abs(leftOver);
-                if (dif <= tolerence) return dif > 0 ? n+1 : n;
+                finalPayment = result - targetValue;
+                var dif = Math.Abs(finalPayment);
+                if (dif <= annualWorth)
+                    return dif > 0 ? n+1 : n;
                 if (result > targetValue) a = n;
                 else b = n;
             }

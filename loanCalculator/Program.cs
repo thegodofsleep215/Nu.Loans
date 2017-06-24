@@ -36,8 +36,8 @@ namespace loanCalculator
 
         private static void RandomCrap()
         {
-//var loan = new Loan("4652 Sig Loan", (decimal) .0525, (decimal) 3630.07, (decimal) 47.22);
-            var loan = new Loan("Van Loan", (decimal) .0449, (decimal) 6653.54, (decimal) 500);
+            //var loan = new Loan("4652 Sig Loan", (decimal) .0525, (decimal) 3630.07, (decimal) 47.22);
+            var loan = new Loan("Van Loan", (decimal).0449, (decimal)6653.54, (decimal)500);
             var bl = new LoanPayoff();
 
             var currentDate = new DateTime(2016, 11, 27);
@@ -52,7 +52,7 @@ namespace loanCalculator
             var actualN =
                 Financial.FindN(
                     n =>
-                        Financial.FGivenP((decimal) 6653.54, n, loan.MonthlyInterestRate) -
+                        Financial.FGivenP((decimal)6653.54, n, loan.MonthlyInterestRate) -
                         Financial.FGivenA(annualWorth, n, loan.MonthlyInterestRate), 0, annualWorth, out finalPayment);
             var fa = Financial.FGivenA(loan, 94, l => l.MonthlyInterestRate);
             var fp = Financial.FGivenP(loan, 94, l => l.MonthlyInterestRate);
@@ -64,7 +64,7 @@ namespace loanCalculator
             var payments = Enumerable.Range(0, (payOffDate - currentDate).Days + 1)
                 .Select(day => currentDate.AddDays(day))
                 .Where(x => x.Day == paymentDay)
-                .Select(x => new LoanPayment {Year = x.Year, Month = x.Month, Day = x.Day, Payment = loan.AnnualWorth})
+                .Select(x => new LoanPayment { Year = x.Year, Month = x.Month, Day = x.Day, Payment = loan.AnnualWorth })
                 .ToDictionary(x => x.Date, x => x);
             return new LoanPayments(payments);
         }
@@ -101,7 +101,7 @@ namespace loanCalculator
             }
             return
                 new LoanPayments(paymentDates.ToDictionary(dt => dt,
-                    dt => new LoanPayment {Year = dt.Year, Month = dt.Month, Day = dt.Day, Payment = loan.AnnualWorth}));
+                    dt => new LoanPayment { Year = dt.Year, Month = dt.Month, Day = dt.Day, Payment = loan.AnnualWorth }));
         }
     }
 
@@ -131,18 +131,6 @@ namespace loanCalculator
                 var foo = Csv.CsvReader.ReadFromStream(s);
                 var loans =
                     foo.Select(x => x.Headers.ToDictionary(h => h.ToUpper(), h => x[h])).Select(CsvToLoan).ToList();
-                //var line = s.ReadLine();
-                //if (line == null) return "Done, nothing to impot.";
-                //var header = line.Split(',');
-
-                //List<Loan> loans = new List<Loan>();
-                //while (!s.EndOfStream)
-                //{
-                //    line = s.ReadLine();
-                //    if (line == null) continue;
-                //    var values = line.Split(',');
-                //    loans.Add(CsvToLoan(header, values));
-                //}
 
                 if (loans.Count > 0) loanStore.Save(loans);
                 return $"Imported {loans.Count} loans.";
@@ -151,10 +139,19 @@ namespace loanCalculator
 
         private Loan CsvToLoan(Dictionary<string, string> dict)
         {
-            var apr = decimal.Parse(dict["APR"].Replace("%", ""))/100;
+            var apr = decimal.Parse(dict["APR"].Replace("%", "")) / 100;
             var pv = decimal.Parse(dict["PV"].Replace("$", "").Replace(",", ""));
             var aw = decimal.Parse(dict["AW"].Replace("$", "").Replace(",", ""));
             return new Loan(dict["NAME"], apr, pv, aw);
+        }
+
+        [TypedCommand("payoffDate", "")]
+        public string PayOffDate(decimal pv, decimal apr, decimal aw)
+        {
+            Func<int, decimal> loanCb = n => Financial.FGivenP(pv, n, apr/12) - Financial.FGivenA(aw, n, apr/12);
+            decimal finalPayment;
+            var months = Financial.FindN(loanCb, (decimal)0.0, aw, out finalPayment);
+            return DateTime.Now.AddMonths(months).ToShortDateString();
         }
 
         [TypedCommand("payoff", "")]
@@ -178,7 +175,7 @@ namespace loanCalculator
 
         private Queue<LoanExt> LowestPv(List<LoanExt> loans)
         {
-            
+
             var queue = new Queue<LoanExt>();
             loans.Where(x => x.PresentValue > 0).OrderBy(x => x.PresentValue).ToList().ForEach(queue.Enqueue);
             return queue;
@@ -194,7 +191,7 @@ namespace loanCalculator
             Func<string, DateTime, decimal> f = (h, dt) => stats[h].ContainsKey(dt) ? stats[h][dt].PresentValue : 0;
             var rows = dates.Select(dt => $"\"{dt.ToShortDateString()}\"," + string.Join(",", stats.Keys.Select(h => $"\"{f(h, dt)}\""))).ToList();
 
-            using(var s = new StreamWriter(File.Create(file)))
+            using (var s = new StreamWriter(File.Create(file)))
             {
                 s.WriteLine(header);
                 rows.ForEach(s.WriteLine);
@@ -209,7 +206,7 @@ namespace loanCalculator
             Func<string, DateTime, decimal> f = (h, dt) => stats[h].ContainsKey(dt) ? stats[h][dt].Payment : 0;
             var rows = dates.Select(dt => $"\"{dt.ToShortDateString()}\"," + string.Join(",", stats.Keys.Select(h => $"\"{f(h, dt)}\""))).ToList();
 
-            using(var s = new StreamWriter(File.Create(file)))
+            using (var s = new StreamWriter(File.Create(file)))
             {
                 s.WriteLine(header);
                 rows.ForEach(s.WriteLine);
